@@ -40,10 +40,46 @@ async function run() {
 
     // connection 
     const petsCollection = client.db('Petco').collection('pets');
+    const usersCollection = client.db('Petco').collection('users');
 
 
     
-    // Get all pets from db
+    // Save user data in DB => DashBoard Admin => 01
+    app.put('/user', async (req, res)=> {
+      const user = req.body
+      const query = { email: user?.email }
+      // check if user already exists in DB
+      const isExist = await usersCollection.findOne({email: user?.email})
+      if(isExist) {
+        if(user?.status === 'Requested') {
+          const result = await usersCollection.updateOne(query, {
+            $set: { status: user?.status },
+          })
+          return res.send(result)
+        }
+      } 
+
+        // save user for the first time
+      const options = { upsert: true }
+      // const query = { email: user?.email }
+      const updateDoc = {
+        $set: {
+          ...user,
+          timestamp: Date.now(),
+        },
+      }
+      const result = await usersCollection.updateOne(query, updateDoc, options)
+      res.send(result)
+    })
+
+    // get all users data from DB => 02
+    app.get('/users', async(req, res) =>{
+      const result = await usersCollection.find().toArray()
+      res.send(result)    
+    })
+
+    
+    // Get all pets from db => 01
     app.get('/pets', async (req, res) => {
       const category = req.query.category
       console.log(category)
@@ -55,7 +91,36 @@ async function run() {
       res.send(result);
     })
 
-    // Get a single pets data
+   
+
+
+    // Save a pet data in DB => 03
+    app.post('/pet', async(req, res) => {
+      const petData = req.body
+      const result = await petsCollection.insertOne(petData)
+      res.send(result)
+    })
+
+    // get all pet for User => 04
+    app.get('/my-pets/:email', async (req, res) => {
+      const email =  req.params.email
+
+      let query = {'User.email': email}
+      
+      const result = await petsCollection.find(query).toArray();
+      res.send(result);
+    })
+
+    // delete a pet => 05
+    app.delete('/pet/:id', async (req, res) =>{
+      const id = req.params.id
+      const query = {_id: new ObjectId(id)}
+      const result = await petsCollection.deleteOne(query)
+      res.send(result)
+    })
+
+
+    // Get a single pets data from DB using _id => 02
     app.get('/pet/:id', async (req, res) => {
       const id = req.params.id
       const query = { _id: new ObjectId(id)}
