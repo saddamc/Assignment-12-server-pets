@@ -56,9 +56,12 @@ async function run() {
             $set: { status: user?.status },
           })
           return res.send(result)
+        } else {
+          // if existing user login again
+          return res.send(isExist)
         }
-      } 
-
+      }
+    
         // save user for the first time
       const options = { upsert: true }
       // const query = { email: user?.email }
@@ -72,10 +75,33 @@ async function run() {
       res.send(result)
     })
 
+    // get a user info by email from DB (role)
+    app.get('/user/:email', async(req, res) => {
+      const email = req.params.email
+      const result = await usersCollection.findOne({email})
+      res.send(result)
+    })
+
+
     // get all users data from DB => 02
     app.get('/users', async(req, res) =>{
       const result = await usersCollection.find().toArray()
       res.send(result)    
+    })
+
+    // update a user role
+    app.patch('/users/update/:email', async(req, res) => {
+      const email = req.params.email
+      const user = req.body
+      const query = { email }
+      const updateDoc = {
+        $set: {
+          ...user, 
+          timestamp: Date.now(),
+        },
+      }
+      const result = await usersCollection.updateOne(query, updateDoc)
+      res.send(result)
     })
 
     
