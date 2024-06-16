@@ -114,7 +114,7 @@ async function run() {
     })
 
     // get a user info by email from DB (role)
-    app.get('/user/:email', async(req, res) => {
+    app.get('/user/:email', verifyToken, async(req, res) => {
       const email = req.params.email
       const result = await usersCollection.findOne({email})
       res.send(result)
@@ -144,7 +144,7 @@ async function run() {
     })
 
     // update a user role
-    app.patch('/users/update/:email', async(req, res) => {
+    app.patch('/users/update/:email', verifyToken, async(req, res) => {
       const email = req.params.email
       const user = req.body
       const query = { email }
@@ -175,14 +175,14 @@ async function run() {
 
 
     // Save a pet data in DB => 03
-    app.post('/pet', async(req, res) => {
+    app.post('/pet',  async(req, res) => {
       const petData = req.body
       const result = await petsCollection.insertOne(petData)
       res.send(result)
     })
 
     // get all pet for User => 04
-    app.get('/my-pets/:email', async (req, res) => {
+    app.get('/my-pets/:email',  async (req, res) => {
       const email =  req.params.email
 
       let query = {'User.email': email}
@@ -192,16 +192,28 @@ async function run() {
     })
 
     // delete a pet => 05
-    app.delete('/pet/:id', async (req, res) =>{
+    app.delete('/pet/:id', verifyToken, async (req, res) =>{
       const id = req.params.id
       const query = {_id: new ObjectId(id)}
       const result = await petsCollection.deleteOne(query)
       res.send(result)
     })
 
+    // update Pet data
+    app.put('/pet/update/:id',  async (req, res) => {
+      const id = req.params.id
+      const petData = req.body
+      const query = { _id: new ObjectId(id) }
+      const updateDoc = {
+        $set: petData,
+      }
+      const result = await petsCollection.updateOne(query, updateDoc)
+      res.send(result)
+    })
+
 
     // Get a single pets data from DB using _id => 02
-    app.get('/pet/:id', async (req, res) => {
+    app.get('/pet/:id', verifyToken, async (req, res) => {
       const id = req.params.id
       const query = { _id: new ObjectId(id)}
       const result = await petsCollection.findOne(query)
