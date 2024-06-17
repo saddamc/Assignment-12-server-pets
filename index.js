@@ -128,6 +128,7 @@ async function run() {
       res.send(result)    
     })
 
+
     app.get('/users/admin/:email', verifyToken, async(req, res) =>{
       const email = req.params.email;
       if(email !==  req.decoded.email) {
@@ -159,7 +160,7 @@ async function run() {
     })
 
     // update Pet data
-    app.put('/pet/update/:id',  async (req, res) => {
+    app.put('/pet/update/:id', verifyAdmin,  async (req, res) => {
       const id = req.params.id
       const petData = req.body
       const query = { _id: new ObjectId(id) }
@@ -172,7 +173,7 @@ async function run() {
 
     
     // Get all pets from db => 01
-    app.get('/pets', async (req, res) => {
+    app.get('/pets',  async (req, res) => {
       const category = req.query.category
       console.log(category)
       let query = {}
@@ -225,7 +226,7 @@ async function run() {
     })
 
     // get all pet for Adopt => 01
-    app.get('/adopt/:id',  async (req, res) => {
+    app.get('/adopt/:id', verifyToken, async (req, res) => {
       const id = req.params.id
       const query = { _id: new ObjectId(id)}
       const result = await petsCollection.findOne(query)
@@ -233,10 +234,25 @@ async function run() {
     })
 
     // adopt pet in DB => 02
-    app.post('/adopt', async(req, res) => {
-      const petData = req.body
-      const result = await petsCollection.insertOne(petData)
+    app.patch('/adopt/:id', async (req, res) => {
+      const id = req.params.id
+      const adoptData = req.body
+      const query = { _id: new ObjectId(id) }
+      const updateDoc = {
+        $set: adoptData,
+      }
+      const result = await petsCollection.updateOne(query, updateDoc)
       res.send(result)
+    })
+
+    // my Adopt list show  => 03
+    app.get('/my-adopt/:email', verifyToken, async (req, res) => {
+      const email =  req.params.email
+
+      let query = {'adopter.email': email}
+      
+      const result = await petsCollection.find(query).toArray();
+      res.send(result);
     })
 
 
