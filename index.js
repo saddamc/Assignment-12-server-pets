@@ -158,6 +158,18 @@ async function run() {
       res.send(result)
     })
 
+    // update Pet data
+    app.put('/pet/update/:id',  async (req, res) => {
+      const id = req.params.id
+      const petData = req.body
+      const query = { _id: new ObjectId(id) }
+      const updateDoc = {
+        $set: petData,
+      }
+      const result = await petsCollection.updateOne(query, updateDoc)
+      res.send(result)
+    })
+
     
     // Get all pets from db => 01
     app.get('/pets', async (req, res) => {
@@ -175,7 +187,7 @@ async function run() {
 
 
     // Save a pet data in DB => 03
-    app.post('/pet',  async(req, res) => {
+    app.post('/pet', verifyToken, async(req, res) => {
       const petData = req.body
       const result = await petsCollection.insertOne(petData)
       res.send(result)
@@ -191,6 +203,8 @@ async function run() {
       res.send(result);
     })
 
+    
+
     // delete a pet => 05
     app.delete('/pet/:id', verifyToken, async (req, res) =>{
       const id = req.params.id
@@ -199,25 +213,30 @@ async function run() {
       res.send(result)
     })
 
-    // update Pet data
-    app.put('/pet/update/:id',  async (req, res) => {
-      const id = req.params.id
-      const petData = req.body
-      const query = { _id: new ObjectId(id) }
-      const updateDoc = {
-        $set: petData,
-      }
-      const result = await petsCollection.updateOne(query, updateDoc)
-      res.send(result)
-    })
+    
 
 
     // Get a single pets data from DB using _id => 02
-    app.get('/pet/:id', verifyToken, async (req, res) => {
+    app.get('/pet/:id', async (req, res) => {
       const id = req.params.id
       const query = { _id: new ObjectId(id)}
       const result = await petsCollection.findOne(query)
       res.send(result);
+    })
+
+    // get all pet for Adopt => 01
+    app.get('/adopt/:id',  async (req, res) => {
+      const id = req.params.id
+      const query = { _id: new ObjectId(id)}
+      const result = await petsCollection.findOne(query)
+      res.send(result);
+    })
+
+    // adopt pet in DB => 02
+    app.post('/adopt', async(req, res) => {
+      const petData = req.body
+      const result = await petsCollection.insertOne(petData)
+      res.send(result)
     })
 
 
