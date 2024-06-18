@@ -41,6 +41,7 @@ async function run() {
     // connection 
     const petsCollection = client.db('Petco').collection('pets');
     const usersCollection = client.db('Petco').collection('users');
+    const campaignsCollection = client.db('Petco').collection('campaigns');
 
 
     // JWT related API => 01
@@ -254,6 +255,35 @@ async function run() {
       const result = await petsCollection.find(query).toArray();
       res.send(result);
     })
+
+    // delete my-pet data => 04
+    app.delete('/my-pet/:id', verifyToken, async (req, res) =>{
+      const id = req.params.id
+      const query = {_id: new ObjectId(id)}
+      const updateDoc = {
+        $unset: { adopter: "", status: ""},
+      }
+      const result = await petsCollection.updateOne(query, updateDoc)
+      res.send(result)
+    })
+
+        // Create campaign  => 01
+    app.post('/campaign', verifyToken, async(req, res) => {
+      const petData = req.body
+      const result = await campaignsCollection.insertOne(petData)
+      res.send(result)
+    })
+
+    // get Campaign => 02
+    app.get('/my-campaign/:email',  async (req, res) => {
+      const email =  req.params.email
+
+      let query = {'User.email': email}
+      
+      const result = await campaignsCollection.find(query).toArray();
+      res.send(result);
+    })
+
 
 
 
