@@ -10,8 +10,10 @@ const port = process.env.PORT || 5000
 
 // middleware
 const corsOptions = {
-  origin: ['http://localhost:5173',
-    
+  origin: [
+    'http://localhost:5173',
+    'https://assignment-pets.web.app',
+    'https://assignment-pets.firebaseapp.com'  
   ],
   credentials: true,
   optionSuccessStatus: 200,
@@ -161,7 +163,7 @@ async function run() {
     })
 
     // update Pet data
-    app.put('/pet/update/:id', verifyAdmin,  async (req, res) => {
+    app.put('/pet/update/:id', verifyToken,  async (req, res) => {
       const id = req.params.id
       const petData = req.body
       const query = { _id: new ObjectId(id) }
@@ -184,6 +186,13 @@ async function run() {
       const result = await petsCollection.find(query).toArray();
       res.send(result);
     })
+
+      // Get all pets for Manage Pets  => 02
+      app.get('/all-pets', verifyToken, verifyAdmin, async (req, res) => {
+        const query = req.body
+        const result = await petsCollection.find(query).toArray();
+        res.send(result);
+      })
 
    
 
