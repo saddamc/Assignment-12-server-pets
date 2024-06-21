@@ -293,6 +293,26 @@ async function run() {
       res.send(result);
     })
 
+    // delete a Campaign => 03
+    app.delete('/my-campaign/:id', verifyToken, async (req, res) =>{
+      const id = req.params.id
+      const query = {_id: new ObjectId(id)}
+      const result = await campaignsCollection.deleteOne(query)
+      res.send(result)
+    })
+
+    // campaign Pet data => 04
+    app.put('/campaign/update/:id', verifyToken,  async (req, res) => {
+      const id = req.params.id
+      const petData = req.body
+      const query = { _id: new ObjectId(id) }
+      const updateDoc = {
+        $set: petData,
+      }
+      const result = await campaignsCollection.updateOne(query, updateDoc)
+      res.send(result)
+    })
+
 
 
 
