@@ -21,7 +21,7 @@ const corsOptions = {
 }
 app.use(cors(corsOptions))
 
-app.use(express.json())
+app.use(express.json()) 
 app.use(cookieParser())
 
 
@@ -45,7 +45,9 @@ async function run() {
     const petsCollection = client.db('Petco').collection('pets');
     const usersCollection = client.db('Petco').collection('users');
     const campaignsCollection = client.db('Petco').collection('campaigns');
-
+    const donationsCollection = client.db('Petco').collection('donations');
+    const paymentCollection = client.db('Petco').collection('payments');
+    
 
     // JWT related API => 01
     app.post('/jwt', async(req, res) => {
@@ -65,7 +67,7 @@ async function run() {
       const token = req.headers.authorization.split(' ')[1];
       jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
         if(err){
-          return res.status(401).send({message: 'unauthorized access'})
+          return res.status(401).send({message: 'unauthorized access'}) 
         }
         req.decoded = decoded;
         next();
@@ -265,6 +267,7 @@ async function run() {
       const result = await petsCollection.find(query).toArray();
       res.send(result);
     })
+    
 
     // delete my-pet data => 04
     app.delete('/my-pet/:id', verifyToken, async (req, res) =>{
@@ -273,27 +276,27 @@ async function run() {
       const updateDoc = {
         $unset: { adopter: "", status: ""},
       }
-      const result = await petsCollection.updateOne(query, updateDoc)
+      const result = await petsCollection.updateOne(query, updateDoc) 
       res.send(result)
-    })
+    })  
 
         // Create campaign  => 01
     app.post('/campaign', verifyToken, async(req, res) => {
       const petData = req.body
       const result = await campaignsCollection.insertOne(petData)
       res.send(result)
-    })
+    })  
 
     // get Campaign => 02
     app.get('/my-campaign/:email',  async (req, res) => {
       const email =  req.params.email
 
-      let query = {'User.email': email}
+      let query = {'User.email': email}     
       
       const result = await campaignsCollection.find(query).toArray();
       res.send(result);
     })
-
+    
     // delete a Campaign => 03
     app.delete('/my-campaign/:id', verifyToken, async (req, res) =>{
       const id = req.params.id
@@ -301,8 +304,16 @@ async function run() {
       const result = await campaignsCollection.deleteOne(query)
       res.send(result)
     })
+    
+    // Get a single Campaign data from DB using _id => 04
+    app.get('/campaign/:id', async (req, res) => {
+      const id = req.params.id
+      const query = { _id: new ObjectId(id)}
+      const result = await campaignsCollection.findOne(query)
+      res.send(result);
+    })
 
-    // campaign Pet data => 04
+    // campaign Pet data => 05
     app.put('/campaign/update/:id', verifyToken,  async (req, res) => {
       const id = req.params.id
       const petData = req.body
@@ -321,6 +332,129 @@ async function run() {
       res.send(result);
     })
 
+    
+      // Create Donation => 01
+      app.post('/donation', verifyToken, async(req, res) => {
+        const donateData = req.body
+        const result = await donationsCollection.insertOne(donateData)
+        res.send(result)
+      })
+
+      // get Donation => 02
+    app.get('/my-donation/:email',  async (req, res) => {   
+      const email =  req.params.email
+
+      let query = {'User.email': email}
+      
+      const result = await donationsCollection.find(query).toArray();
+      res.send(result);
+    })
+
+    // delete a Donation => 03
+    app.delete('/my-donation/:id', async (req, res) =>{
+      const id = req.params.id
+      const query = {_id: new ObjectId(id)}
+      const result = await donationsCollection.deleteOne(query)
+      res.send(result)
+    })
+
+    // stats
+    // app.get('/admin-stats', async(req, res) => {
+    //   const campaign = await campaignsCollection.estimatedDocumentCount();
+    //   const payment = await paymentCollection.estimatedDocumentCount();
+    //   console.log(campaign)
+
+    //   const donationProgress = await paymentCollection.aggregate([
+    //     {
+    //       $group: {
+    //         _id: null,
+    //         totalDonation: {
+    //           $sum: '$payment'
+    //         }
+
+    //       }
+    //     }
+    //   ]).toArray();
+
+    //   const donation = donationProgress.length > 0 ? donationProgress[0].totalDonation : 0;
+
+    //   res.send({
+    //     campaign,
+    //     payment,
+    //     donation
+    //   })
+    // })
+
+    
+    
+    app.get('/progress-stats', async (req, res) => {
+      try {
+        const result = await paymentCollection.aggregate([
+          {
+            $unwind: '$campaignIds'
+          },
+          {
+            $unwind: '$donateIds'
+          },
+          {
+            $unwind: '$note'
+          },
+          // if ObjectId so need addFields
+          {
+            $addFields: {
+              campaignIds: { $toObjectId: '$campaignIds' }
+            }
+          },
+          {
+            $lookup: {
+              from: 'campaigns',
+              localField: 'campaignIds',
+              foreignField: '_id',
+              as: 'campaignDetails'
+            }
+          },
+          {
+            $group: {
+              _id: '$campaignDetails._id',
+              quantity: {
+                $sum: 1
+              },
+              totalDonate: {
+                $sum: '$payment'
+              },
+            }
+          },
+          {
+            $unwind: '$_id'
+          },
+          {
+            $project: {
+              _id: '$_id',
+              // progressId: '$_id',
+              quantity: '$quantity',
+              totalDonate: '$totalDonate',
+            }
+          }
+
+
+        ]).toArray();
+        console.log(result); // Check the output here
+        
+    
+        res.send(result);
+      } catch (error) {
+        console.error("Error in aggregation:", error);
+        res.status(500).send({ error: "Internal Server Error" });
+      }
+    });
+
+    
+    
+
+    
+
+
+
     // payment intent
     app.post('/create-payment-intent', async(req, res) => {
       const { donate } = req.body;
@@ -336,6 +470,43 @@ async function run() {
         clientSecret: paymentIntent.client_secret
       })
     })
+
+    app.get('/payments/:email', verifyToken, async (req, res) => {
+      const query = { email: req.params.email }
+      if (req.params.email !== req.decoded.email) {
+        return res.status(403).send({ message: 'forbidden access' });
+      }
+      const result = await paymentCollection.find(query).toArray();
+      res.send(result);
+    }) 
+
+    app.post('/payments', verifyToken, async  (req, res) => {
+      const payment = req.body;
+      const paymentResult = await paymentCollection.insertOne(payment)
+
+      // carefully delete each item from the donation
+      console.log('payment info', payment);
+
+      const query = {_id: {
+        $in: payment.donateIds.map( id => new ObjectId(id))
+      }};
+      const deleteResult = await donationsCollection.deleteMany(query);
+
+      res.send({paymentResult, deleteResult})
+    })
+
+ 
+    
+
+    // SSLCOMMERZ
+    // app.post('/create-payment', async(req, res => {
+
+    //   const paymentInfo = req.body
+
+    //   console.log(paymentInfo)
+      
+    //   res.send(result)
+    // }))
 
 
 
